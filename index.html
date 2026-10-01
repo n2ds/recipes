@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="สมุดสูตรขนม">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#5E8137">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>สมุดสูตรขนม</title>
+<style>
+/* Layout: one full-height app. Home = recipe grid. Recipe = calculator (left, lavender) | weighing checklist (right, matcha). Stacks under 720px. */
+:root {
+  --bg: #F2F4EE;
+  --surface: #FFFFFF;
+  --ink: #232B26;
+  --ink-soft: #5D675F;
+  --line: #DDE3D6;
+  --matcha: #5E8137;
+  --matcha-deep: #476526;
+  --matcha-tint: #E4EDD5;
+  --matcha-on: #FFFFFF;
+  --lav: #7B66B8;
+  --lav-deep: #5D4A99;
+  --lav-tint: #ECE7F8;
+  --lav-on: #FFFFFF;
+  --danger: #B4412F;
+  --shadow: 0 1px 2px rgba(35,43,38,.06), 0 6px 18px rgba(35,43,38,.06);
+  --font-display: "Sukhumvit Set", "Thonburi", "Noto Sans Thai", system-ui, sans-serif;
+  --font-body: "Sukhumvit Set", "Thonburi", "Noto Sans Thai", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161B17; --surface: #1F2621; --ink: #E7ECE4; --ink-soft: #A3AEA5; --line: #313B33;
+    --matcha: #9FC36A; --matcha-deep: #B7D98A; --matcha-tint: #26331B; --matcha-on: #14210A;
+    --lav: #B5A4EA; --lav-deep: #CFC3F5; --lav-tint: #2A2540; --lav-on: #1D1636;
+    --danger: #F08A78; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161B17; --surface: #1F2621; --ink: #E7ECE4; --ink-soft: #A3AEA5; --line: #313B33;
+  --matcha: #9FC36A; --matcha-deep: #B7D98A; --matcha-tint: #26331B; --matcha-on: #14210A;
+  --lav: #B5A4EA; --lav-deep: #CFC3F5; --lav-tint: #2A2540; --lav-on: #1D1636;
+  --danger: #F08A78; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+  color-scheme: dark;
+}
+
+html { color-scheme: light; }
+html, body { height: 100%; margin: 0; }
+:root { padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+[hidden] { display: none !important; }
+html, body { overscroll-behavior: none; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 17px; line-height: 1.45; -webkit-tap-highlight-color: transparent; }
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; touch-action: manipulation; }
+h1, h2, h3, p { margin: 0; }
+svg.i { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+:focus-visible { outline: 3px solid var(--lav); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+#app { height: 100%; display: flex; flex-direction: column; }
+.bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--line); min-height: 68px; }
+.bar h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; line-height: 1.2; flex: 1; min-width: 0; text-wrap: balance; overflow-wrap: anywhere; }
+.bar .actions { display: flex; gap: 8px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 18px; border-radius: 14px; font-weight: 600; background: var(--surface); border: 1.5px solid var(--line); }
+.btn.primary { background: var(--matcha); color: var(--matcha-on); border-color: transparent; }
+.btn.lav { background: var(--lav); color: var(--lav-on); border-color: transparent; }
+.btn.soft { background: var(--lav-tint); color: var(--lav-deep); border-color: transparent; }
+.btn.danger { color: var(--danger); }
+.btn.icon { width: 48px; padding: 0; }
+.btn:active { transform: scale(.97); }
+
+/* Home */
+.page { flex: 1; overflow-y: auto; padding: 20px 16px 40px; }
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.search { width: 100%; min-height: 52px; padding: 0 16px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 14px; }
+.card { display: flex; align-items: center; gap: 14px; padding: 16px; text-align: left; background: var(--surface); border: 1.5px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); min-width: 0; }
+.card:active { transform: scale(.985); }
+.mono { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; flex: none; }
+.card:nth-child(odd) .mono { background: var(--matcha-tint); color: var(--matcha-deep); }
+.card:nth-child(even) .mono { background: var(--lav-tint); color: var(--lav-deep); }
+.card .t { min-width: 0; }
+.card h2 { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.card p { color: var(--ink-soft); font-size: .92rem; }
+.empty { padding: 40px 16px; text-align: center; color: var(--ink-soft); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.empty strong { font-family: var(--font-display); font-size: 1.25rem; color: var(--ink); }
+
+/* Recipe split */
+.split { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+.pane { min-width: 0; padding: 18px 16px 32px; display: flex; flex-direction: column; gap: 16px; }
+.calc { background: var(--lav-tint); }
+.list { background: var(--matcha-tint); }
+@media (min-width: 720px) {
+  .split { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); overflow: hidden; }
+  .pane { overflow-y: auto; padding: 22px 20px 40px; }
+}
+.label { font-size: .82rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--lav-deep); }
+.list .label { color: var(--matcha-deep); }
+.panel { background: var(--surface); border-radius: 20px; padding: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 14px; }
+
+.mult-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mult-show { font-family: var(--font-display); font-weight: 700; font-size: clamp(2.6rem, 8vw, 3.8rem); line-height: 1; color: var(--lav-deep); text-align: center; flex: 1; min-width: 0; }
+.mult-show small { font-size: .45em; font-weight: 600; margin-right: 4px; }
+.step { width: 64px; height: 64px; border-radius: 50%; background: var(--lav); color: var(--lav-on); display: grid; place-items: center; flex: none; }
+.step:active { transform: scale(.93); }
+.presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.chip { min-height: 52px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; }
+.chip[aria-pressed="true"] { background: var(--lav); border-color: transparent; color: var(--lav-on); }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field span { font-size: .9rem; color: var(--ink-soft); font-weight: 500; }
+.in { width: 100%; min-height: 52px; padding: 0 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); font-size: 1.15rem; }
+textarea.in { padding: 12px 14px; min-height: 96px; line-height: 1.5; resize: vertical; }
+.in.bad { border-color: var(--danger); }
+.pair { display: flex; align-items: center; gap: 10px; }
+.pair .in { flex: 1; min-width: 0; }
+.pair b { color: var(--ink-soft); font-weight: 500; white-space: nowrap; }
+.sum { display: flex; flex-direction: column; gap: 6px; }
+.sum div { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.sum span { color: var(--ink-soft); }
+.sum strong { font-family: var(--font-display); font-size: 1.2rem; }
+.note { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+
+/* Checklist */
+.prog { display: flex; flex-direction: column; gap: 10px; }
+.prog-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.prog-top strong { font-family: var(--font-display); font-size: 1.3rem; }
+.bartrack { height: 12px; border-radius: 99px; background: var(--surface); overflow: hidden; }
+.barfill { height: 100%; background: var(--matcha); border-radius: 99px; transition: width .25s ease; }
+.group-h { font-size: .82rem; font-weight: 700; letter-spacing: .06em; color: var(--matcha-deep); padding: 6px 4px 0; }
+.rows { display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 76px; padding: 12px 16px; background: var(--surface); border: 2px solid transparent; border-radius: 18px; text-align: left; box-shadow: var(--shadow); }
+.row:active { transform: scale(.985); }
+.box { width: 40px; height: 40px; border-radius: 50%; border: 2.5px solid var(--matcha); display: grid; place-items: center; flex: none; color: transparent; }
+.row .nm { flex: 1; min-width: 0; font-size: 1.2rem; font-weight: 600; overflow-wrap: anywhere; }
+.row .nm small { display: block; font-weight: 400; font-size: .85rem; color: var(--ink-soft); }
+.row .amt { font-family: var(--font-display); font-weight: 700; font-size: 1.7rem; text-align: right; white-space: nowrap; }
+.row .amt small { font-family: var(--font-body); font-size: .9rem; font-weight: 500; color: var(--ink-soft); margin-left: 4px; }
+.row[aria-checked="true"] { background: transparent; border-color: var(--matcha); box-shadow: none; }
+.row[aria-checked="true"] .box { background: var(--matcha); color: var(--matcha-on); }
+.row[aria-checked="true"] .nm, .row[aria-checked="true"] .amt { color: var(--ink-soft); text-decoration: line-through; text-decoration-thickness: 2px; }
+.done { text-align: center; font-family: var(--font-display); font-weight: 600; color: var(--matcha-deep); padding: 4px; }
+
+/* Edit */
+.form { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.ing { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.3fr) auto; gap: 8px; align-items: center; }
+.ing .mv { display: flex; gap: 4px; }
+.ing .btn.icon { width: 44px; min-height: 44px; border-radius: 12px; }
+.ing .in { font-size: 1rem; min-height: 48px; padding: 0 10px; }
+.ing-head { font-size: .85rem; color: var(--ink-soft); font-weight: 600; }
+@media (max-width: 640px) {
+  .ing { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .ing .grp { grid-column: 1 / 3; }
+  .ing .mv { grid-column: 3; justify-content: flex-end; }
+  .ing-head { display: none; }
+  .ing + .ing { border-top: 1px dashed var(--line); padding-top: 12px; }
+}
+.footbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; }
+
+.thumb { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: none; }
+.hero { width: 100%; max-height: 230px; object-fit: cover; border-radius: 20px; box-shadow: var(--shadow); display: block; }
+.photo-edit { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.photo-edit img { width: 100%; max-width: 320px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 16px; display: block; }
+.photo-edit .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.logbox { background: var(--surface); border: 2px solid var(--matcha); border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.logbox strong { font-family: var(--font-display); color: var(--matcha-deep); font-size: 1.15rem; }
+.hrow { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 18px; padding: 14px 16px; box-shadow: var(--shadow); }
+.hrow .t { flex: 1; min-width: 0; }
+.hrow h2 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; overflow-wrap: anywhere; }
+.hrow p { color: var(--ink-soft); font-size: .95rem; }
+.hrow .when { color: var(--lav-deep); font-weight: 600; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 14px; font-weight: 600; max-width: calc(100% - 32px); z-index: 10; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<body>
+<div id="app"></div>
+<div id="toast" class="toast" hidden role="status"></div>
+<datalist id="units"><option value="กรัม"><option value="มล."><option value="ฟอง"><option value="ช้อนชา"><option value="ช้อนโต๊ะ"><option value="ถ้วย"><option value="ชิ้น"><option value="ซอง"></datalist>
+<datalist id="groups"></datalist>
+
+<script>
+(function () {
+  const $ = (s, el) => (el || document).querySelector(s);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const ls = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  const ic = d => '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + d + '</svg>';
+  const I = {
+    back: ic('<path d="M15 5l-7 7 7 7"/>'), check: ic('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+    plus: ic('<path d="M12 5v14M5 12h14"/>'), minus: ic('<path d="M5 12h14"/>'),
+    edit: ic('<path d="M4 20h4L19 9l-4-4L4 16v4z"/>'), trash: ic('<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>'),
+    copy: ic('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/>'),
+    clock: ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'), up: ic('<path d="M6 14l6-6 6 6"/>'), down: ic('<path d="M6 10l6 6 6-6"/>'), reset: ic('<path d="M4 12a8 8 0 108-8H7M7 4L4 7l3 3"/>')
+  };
+
+  const S = { recipes: ls.get('recipes-cache', []), batches: ls.get('batches-cache', []), histFilter: null, histFrom: 'home', loading: true, view: 'home', cur: null, mult: 1, ticks: {}, draft: null, db: null, q: '', confirmDel: false };
+  const app = $('#app');
+  let toastT;
+  function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600); }
+
+  function fmt(x) {
+    if (!isFinite(x)) return '–';
+    let r = x >= 100 ? Math.round(x) : x >= 10 ? Math.round(x * 10) / 10 : Math.round(x * 100) / 100;
+    return r.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  }
+  const VF = { '⅛': 0.125, '¼': 0.25, '⅓': 1 / 3, '⅜': 0.375, '½': 0.5, '⅝': 0.625, '⅔': 2 / 3, '¾': 0.75, '⅞': 0.875 };
+  function parseNum(s) {
+    let t = String(s).replace(',', '.').trim(), tot = 0, any = false;
+    for (const k in VF) if (t.includes(k)) { tot += VF[k]; t = t.replace(k, ' '); any = true; }
+    t = t.trim();
+    if (any) { if (!t) return tot; const w = parseFloat(t); return isFinite(w) ? w + tot : NaN; }
+    const m = t.match(/^(?:(\d+(?:\.\d+)?)\s+)?(\d+)\s*\/\s*(\d+)$/);
+    if (m && +m[3] > 0) return (m[1] ? parseFloat(m[1]) : 0) + (+m[2]) / (+m[3]);
+    const v = parseFloat(t); return isFinite(v) ? v : NaN;
+  }
+  const FRAC_UNITS = ['ช้อนชา', 'ช้อนโต๊ะ', 'ถ้วย'];
+  const FR = [[0, ''], [0.125, '⅛'], [0.25, '¼'], [1 / 3, '⅓'], [0.375, '⅜'], [0.5, '½'], [0.625, '⅝'], [2 / 3, '⅔'], [0.75, '¾'], [0.875, '⅞'], [1, '']];
+  /* Spoons and cups show as fractions (1 ½, ¾) so they match the measuring set; other units show decimals. */
+  function fmtAmt(x, unit) {
+    if (!FRAC_UNITS.includes((unit || '').trim()) || !isFinite(x)) return fmt(x);
+    if (x < 0.0625) return fmt(x);
+    const w = Math.floor(x), f = x - w;
+    let best = FR[0]; FR.forEach(c => { if (Math.abs(c[0] - f) < Math.abs(best[0] - f)) best = c; });
+    const whole = best[0] === 1 ? w + 1 : w, frac = best[0] === 1 ? '' : best[1];
+    const txt = (whole ? whole : '') + (whole && frac ? ' ' : '') + frac;
+    return (Math.abs(best[0] - f) > 0.02 ? '≈' : '') + txt;
+  }
+  const uid = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const cur = () => S.recipes.find(r => r.id === S.cur);
+
+  /* ---------- storage ---------- */
+  function sortRecipes() { S.recipes.sort((a, b) => (a.ts || 0) - (b.ts || 0)); }
+  function cache() { ls.set('recipes-cache', S.recipes); }
+  async function saveRecipe(r) {
+    const i = S.recipes.findIndex(x => x.id === r.id);
+    if (i >= 0) S.recipes[i] = r; else S.recipes.push(r);
+    sortRecipes(); cache();
+    if (S.db) {
+      try { await S.db.doc('recipes/' + r.id).set(JSON.parse(JSON.stringify(r))); }
+      catch (e) { toast('บันทึกลงระบบไม่สำเร็จ เก็บไว้ในเครื่องนี้แทน'); }
+    }
+  }
+  async function removeRecipe(id) {
+    S.recipes = S.recipes.filter(r => r.id !== id); cache();
+    if (S.db) { try { await S.db.doc('recipes/' + id).delete(); } catch (e) { toast('ลบในระบบไม่สำเร็จ'); } }
+  }
+
+  function cacheB() { ls.set('batches-cache', S.batches); }
+  async function saveBatch(b) {
+    const i = S.batches.findIndex(x => x.id === b.id);
+    if (i >= 0) S.batches[i] = b; else S.batches.push(b);
+    cacheB();
+    if (S.db) { try { await S.db.doc('batches/' + b.id).set(JSON.parse(JSON.stringify(b))); } catch (e) { toast('บันทึกประวัติลงระบบไม่สำเร็จ เก็บไว้ในเครื่องนี้แทน'); } }
+  }
+  async function removeBatch(id) {
+    S.batches = S.batches.filter(b => b.id !== id); cacheB();
+    if (S.db) { try { await S.db.doc('batches/' + id).delete(); } catch (e) { toast('ลบในระบบไม่สำเร็จ'); } }
+  }
+  async function logCompletion(r) {
+    const lid = ls.get('log:' + r.id, null);
+    const yieldText = r.yn ? fmt(r.yn * S.mult) + ' ' + (r.yunit || '') : '';
+    const old = lid && S.batches.find(x => x.id === lid);
+    let b;
+    if (old) b = Object.assign({}, old, { name: r.name, mult: S.mult, yieldText, ts: Date.now() });
+    else { b = { id: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), rid: r.id, name: r.name, mult: S.mult, yieldText, ts: Date.now() }; ls.set('log:' + r.id, b.id); }
+    await saveBatch(b); toast('บันทึกการทำครั้งนี้แล้ว');
+  }
+  function resizePhoto(file) {
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onerror = () => rej(new Error('read'));
+      fr.onload = () => {
+        const img = new Image();
+        img.onerror = () => rej(new Error('img'));
+        img.onload = () => {
+          const k = Math.min(1, 900 / Math.max(img.width, img.height));
+          const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          let q = 0.78, out = c.toDataURL('image/jpeg', q);
+          while (out.length > 180000 && q > 0.35) { q -= 0.1; out = c.toDataURL('image/jpeg', q); }
+          out.length > 230000 ? rej(new Error('big')) : res(out);
+        };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  async function exportData() {
+    if (!S.store) { toast('เครื่องนี้ไม่รองรับการสำรองข้อมูล'); return; }
+    const data = await S.store.dump();
+    const name = 'สมุดสูตรขนม-' + new Date().toISOString().slice(0, 10) + '.json';
+    const file = new File([JSON.stringify(data)], name, { type: 'application/json' });
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('สร้างไฟล์สำรองข้อมูลแล้ว');
+  }
+  async function importData(f) {
+    try {
+      const obj = JSON.parse(await f.text());
+      if (!obj || obj.app !== 'recipe-book') throw new Error('bad');
+      await S.store.load(obj); toast('นำเข้าข้อมูลแล้ว');
+    } catch (e) { toast('ไฟล์นี้ใช้นำเข้าไม่ได้'); }
+  }
+
+  /* ---------- home ---------- */
+  function renderHome() {
+    releaseWake();
+    app.innerHTML =
+      '<header class="bar"><h1>สมุดสูตรขนม</h1><div class="actions"><button class="btn" id="hist">' + I.clock + 'ประวัติ</button><button class="btn primary" id="add">' + I.plus + 'เพิ่มสูตร</button></div></header>' +
+      '<div class="page"><div class="wrap"><input id="q" class="search" type="search" placeholder="ค้นหาสูตร" value="' + esc(S.q) + '" aria-label="ค้นหาสูตร"><div id="grid"></div>' +
+      '<div class="footbar" style="margin-top:12px"><button class="btn" id="export">สำรองข้อมูล</button><label class="btn" for="import">นำเข้าข้อมูลสำรอง</label><input id="import" type="file" accept="application/json,.json" style="position:absolute;width:1px;height:1px;opacity:0"></div>' +
+      '<p style="color:var(--ink-soft);font-size:.9rem">สูตร รูป และประวัติเก็บอยู่ในเครื่องนี้ ควรกดสำรองข้อมูลเก็บไว้เป็นครั้งคราว</p></div></div>';
+    $('#add').onclick = () => openEdit(null);
+    $('#hist').onclick = () => openHistory(null, 'home');
+    $('#export').onclick = exportData;
+    $('#import').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) importData(f); e.target.value = ''; };
+    $('#q').oninput = e => { S.q = e.target.value; renderGrid(); };
+    renderGrid();
+  }
+  function renderGrid() {
+    const g = $('#grid'); if (!g) return;
+    const q = S.q.trim().toLowerCase();
+    const list = S.recipes.filter(r => !q || r.name.toLowerCase().includes(q));
+    if (!list.length) {
+      g.innerHTML = S.loading && !S.recipes.length ? '<div class="empty">กำลังโหลดสูตร…</div>' :
+        q ? '<div class="empty"><strong>ไม่พบสูตรที่ค้นหา</strong></div>' :
+        '<div class="empty"><strong>ยังไม่มีสูตร</strong><span>เพิ่มสูตรแรก แล้วจะเห็นรายการทั้งหมดที่นี่</span><button class="btn primary" id="add2">' + I.plus + 'เพิ่มสูตรแรก</button></div>';
+      const b = $('#add2'); if (b) b.onclick = () => openEdit(null);
+      return;
+    }
+    g.innerHTML = '<div class="grid">' + list.map(r =>
+      '<button class="card" data-id="' + esc(r.id) + '">' + (r.photo ? '<img class="thumb" alt="" src="' + esc(r.photo) + '">' : '<span class="mono">' + esc([...r.name.trim()][0] || '?') + '</span>') + '<span class="t"><h2>' + esc(r.name) + '</h2><p>' +
+      r.ing.length + ' รายการ' + (r.yn ? ' · ทำได้ ' + fmt(r.yn) + ' ' + esc(r.yunit || '') : '') + '</p></span></button>').join('') + '</div>';
+    g.querySelectorAll('.card').forEach(c => c.onclick = () => openRecipe(c.dataset.id));
+  }
+
+  /* ---------- recipe view ---------- */
+  let wake = null;
+  async function takeWake() { try { if (navigator.wakeLock && document.visibilityState === 'visible') wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
+  function releaseWake() { try { if (wake) wake.release(); } catch (e) {} wake = null; }
+  document.addEventListener('visibilitychange', () => { if (S.view === 'recipe' && document.visibilityState === 'visible') takeWake(); });
+
+  function openRecipe(id) {
+    S.cur = id; S.view = 'recipe'; S.confirmDel = false;
+    S.ticks = ls.get('ticks:' + id, {});
+    S.mult = ls.get('mult:' + id, 1);
+    renderRecipe(); takeWake();
+  }
+  const PRESETS = [[0.5, '½'], [1, '1'], [1.5, '1½'], [2, '2'], [3, '3'], [4, '4']];
+
+  function renderRecipe() {
+    const r = cur(); if (!r) { S.view = 'home'; return renderHome(); }
+    app.innerHTML =
+      '<header class="bar"><button class="btn icon" id="back" aria-label="กลับหน้ารวมสูตร">' + I.back + '</button><h1>' + esc(r.name) + '</h1>' +
+      '<div class="actions"><button class="btn icon" id="hist" aria-label="ประวัติการทำ">' + I.clock + '</button><button class="btn icon" id="edit" aria-label="แก้ไขสูตร">' + I.edit + '</button></div></header>' +
+      '<main class="split">' +
+      '<section class="pane calc" aria-label="เครื่องคำนวณ">' + (r.photo ? '<img class="hero" alt="' + esc(r.name) + '" src="' + esc(r.photo) + '">' : '') + '<div class="label">คำนวณจำนวนเซต</div>' +
+      '<div class="panel"><div class="mult-row"><button class="step" id="dec" aria-label="ลด 0.25 เซต">' + I.minus + '</button>' +
+      '<div class="mult-show num" aria-live="polite"><small>×</small><span id="mv"></span></div>' +
+      '<button class="step" id="inc" aria-label="เพิ่ม 0.25 เซต">' + I.plus + '</button></div>' +
+      '<div class="presets" id="presets">' + PRESETS.map(p => '<button class="chip" data-v="' + p[0] + '" aria-pressed="false">' + p[1] + ' เซต</button>').join('') + '</div>' +
+      '<label class="field"><span>ใส่จำนวนเซตเอง (เช่น 2.5)</span><div class="pair"><input class="in num" id="custom" inputmode="decimal" autocomplete="off"><b>เซต</b></div></label>' +
+      (r.yn ? '<label class="field"><span>หรือกรอกจำนวนที่ต้องการ (สูตรเดิมทำได้ ' + fmt(r.yn) + ' ' + esc(r.yunit || '') + ')</span><div class="pair"><input class="in num" id="yield" inputmode="decimal" autocomplete="off"><b>' + esc(r.yunit || '') + '</b></div></label>' : '') +
+      '</div>' +
+      '<div class="panel sum" id="sum"></div>' +
+      (r.note && r.note.trim() ? '<div class="panel"><div class="label">โน้ต</div><div class="note">' + esc(r.note) + '</div></div>' : '') +
+      '</section>' +
+      '<section class="pane list" aria-label="เช็กลิสต์ชั่งวัตถุดิบ"><div class="prog" id="prog"></div><div id="rows"></div></section></main>';
+    $('#back').onclick = () => { S.view = 'home'; renderHome(); };
+    $('#edit').onclick = () => openEdit(r.id);
+    $('#hist').onclick = () => openHistory(r.id, 'recipe');
+    $('#dec').onclick = () => setMult(Math.round((S.mult - 0.25) * 1000) / 1000);
+    $('#inc').onclick = () => setMult(Math.round((S.mult + 0.25) * 1000) / 1000);
+    $('#presets').onclick = e => { const b = e.target.closest('.chip'); if (b) setMult(parseFloat(b.dataset.v)); };
+    $('#custom').oninput = e => { const v = parseNum(e.target.value); if (v > 0) setMult(v, 'custom'); };
+    const y = $('#yield'); if (y) y.oninput = e => { const v = parseNum(e.target.value); if (v > 0) setMult(v / r.yn, 'yield'); };
+    $('#rows').onclick = e => {
+      const b = e.target.closest('.row'); if (!b) return;
+      const id = b.dataset.id; if (S.ticks[id]) delete S.ticks[id]; else S.ticks[id] = 1;
+      ls.set('ticks:' + S.cur, S.ticks); renderList();
+      const rr = cur(); if (rr && S.ticks[id] && rr.ing.every(g => S.ticks[g.id])) logCompletion(rr);
+    };
+    $('#prog').onclick = e => { if (e.target.closest('#reset')) { S.ticks = {}; ls.set('ticks:' + S.cur, S.ticks); ls.set('log:' + S.cur, null); renderList(); } };
+    refreshCalc(); renderList();
+  }
+
+  function setMult(v, src) {
+    if (!(v > 0)) return;
+    S.mult = Math.min(100, Math.max(0.05, Math.round(v * 1000) / 1000));
+    ls.set('mult:' + S.cur, S.mult);
+    refreshCalc(src); renderList();
+  }
+  function refreshCalc(src) {
+    const r = cur(); if (!r) return;
+    const mv = $('#mv'); if (!mv) return;
+    mv.textContent = fmt(S.mult);
+    document.querySelectorAll('#presets .chip').forEach(c => c.setAttribute('aria-pressed', Math.abs(parseFloat(c.dataset.v) - S.mult) < 1e-6 ? 'true' : 'false'));
+    const c = $('#custom'); if (c && src !== 'custom') c.value = fmt(S.mult);
+    const y = $('#yield'); if (y && src !== 'yield') y.value = fmt(r.yn * S.mult);
+    const grams = r.ing.reduce((a, g) => a + (g.unit === 'กรัม' ? g.amt * S.mult : 0), 0);
+    $('#sum').innerHTML =
+      '<div><span>จำนวนเซต</span><strong class="num">' + fmt(S.mult) + ' เซต</strong></div>' +
+      (r.yn ? '<div><span>ทำได้ประมาณ</span><strong class="num">' + fmt(r.yn * S.mult) + ' ' + esc(r.yunit || '') + '</strong></div>' : '') +
+      (grams > 0 ? '<div><span>รวมวัตถุดิบที่เป็นกรัม</span><strong class="num">' + fmt(grams) + ' กรัม</strong></div>' : '');
+  }
+  function renderList() {
+    const r = cur(); const rows = $('#rows'); if (!r || !rows) return;
+    const total = r.ing.length, done = r.ing.filter(g => S.ticks[g.id]).length;
+    $('#prog').innerHTML =
+      '<div class="label">ชั่งวัตถุดิบ</div><div class="prog-top"><strong class="num">ชั่งแล้ว ' + done + ' / ' + total + '</strong>' +
+      '<button class="btn" id="reset" ' + (done ? '' : 'disabled style="opacity:.5"') + '>' + I.reset + 'เริ่มใหม่</button></div>' +
+      '<div class="bartrack" role="progressbar" aria-valuemin="0" aria-valuemax="' + total + '" aria-valuenow="' + done + '"><div class="barfill" style="width:' + (total ? done / total * 100 : 0) + '%"></div></div>';
+    let html = '', lastG = null;
+    r.ing.forEach(g => {
+      const grp = (g.group || '').trim();
+      if (grp !== lastG) { if (html) html += '</div>'; html += (grp ? '<div class="group-h">' + esc(grp) + '</div>' : '') + '<div class="rows" style="margin-bottom:12px">'; lastG = grp; }
+      const on = !!S.ticks[g.id];
+      html += '<button class="row" role="checkbox" aria-checked="' + on + '" data-id="' + esc(g.id) + '"><span class="box">' + I.check + '</span>' +
+        '<span class="nm">' + esc(g.name) + '<small class="num">สูตรเดิม ' + fmtAmt(g.amt, g.unit) + ' ' + esc(g.unit || '') + '</small></span>' +
+        '<span class="amt num">' + fmtAmt(g.amt * S.mult, g.unit) + '<small>' + esc(g.unit || '') + '</small></span></button>';
+    });
+    rows.innerHTML = html + (html ? '</div>' : '') + (total && done === total ? '<div class="logbox"><strong>ชั่งครบทุกอย่างแล้ว</strong><span>บันทึกการทำครั้งนี้ไว้ในประวัติแล้ว</span><button class="btn" id="seehist">' + I.clock + 'ดูประวัติ</button></div>' : '');
+    const sh = $('#seehist'); if (sh) sh.onclick = () => openHistory(r.id, 'recipe');
+  }
+
+  /* ---------- history ---------- */
+  function openHistory(rid, from) { S.histFilter = rid; S.histFrom = from; S.view = 'history'; S.confirmDel = false; releaseWake(); renderHistory(); }
+  function renderHistory() {
+    const rid = S.histFilter, rec = rid ? S.recipes.find(r => r.id === rid) : null;
+    const list = S.batches.filter(b => !rid || b.rid === rid).slice().sort((a, b) => b.ts - a.ts);
+    app.innerHTML =
+      '<header class="bar"><button class="btn icon" id="back" aria-label="กลับ">' + I.back + '</button><h1>ประวัติการทำ' + (rec ? ' · ' + esc(rec.name) : '') + '</h1></header>' +
+      '<div class="page"><div class="wrap">' + (list.length ? list.map(b =>
+        '<div class="hrow"><div class="t"><p class="when">' + esc(new Date(b.ts).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })) + '</p>' +
+        (rid ? '' : '<h2>' + esc(b.name) + '</h2>') +
+        '<p class="num">' + fmt(b.mult) + ' เซต' + (b.yieldText ? ' · ทำได้ ' + esc(b.yieldText) : '') + '</p></div>' +
+        '<button class="btn icon danger" data-del="' + esc(b.id) + '" aria-label="ลบรายการนี้">' + I.trash + '</button></div>').join('') :
+        '<div class="empty"><strong>ยังไม่มีประวัติ</strong><span>เมื่อติ๊กชั่งวัตถุดิบครบทุกรายการ ระบบจะบันทึกการทำครั้งนั้นไว้ที่นี่</span></div>') + '</div></div>';
+    $('#back').onclick = () => { if (S.histFrom === 'recipe' && cur()) { S.view = 'recipe'; renderRecipe(); takeWake(); } else { S.view = 'home'; renderHome(); } };
+    app.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.classList.remove('icon'); b.innerHTML = 'แตะอีกครั้งเพื่อลบ'; return; }
+      await removeBatch(b.dataset.del); renderHistory();
+    });
+  }
+
+  /* ---------- edit ---------- */
+  function openEdit(id) {
+    const r = id ? S.recipes.find(x => x.id === id) : null;
+    S.draft = r ? { id: r.id, ts: r.ts, photo: r.photo || '', name: r.name, yn: r.yn ? String(r.yn) : '', yunit: r.yunit || 'ชิ้น', note: r.note || '',
+        ing: r.ing.map(g => ({ id: g.id, name: g.name, amt: fmtAmt(g.amt, g.unit).replace('≈', ''), unit: g.unit, group: g.group || '' })) }
+      : { id: null, photo: '', name: '', yn: '', yunit: 'ชิ้น', note: '', ing: [newIng(), newIng(), newIng()] };
+    S.confirmDel = false; S.view = 'edit'; releaseWake(); renderEdit();
+  }
+  function newIng() { return { id: 'i' + Math.random().toString(36).slice(2, 8), name: '', amt: '', unit: 'กรัม', group: '' }; }
+
+  function renderEdit() {
+    const d = S.draft;
+    app.innerHTML =
+      '<header class="bar"><button class="btn icon" id="cancel" aria-label="ยกเลิก">' + I.back + '</button><h1>' + (d.id ? 'แก้ไขสูตร' : 'สูตรใหม่') + '</h1>' +
+      '<div class="actions"><button class="btn primary" id="save">' + I.check + 'บันทึก</button></div></header>' +
+      '<div class="page"><div class="form">' +
+      '<label class="field"><span>ชื่อสูตร</span><input class="in" id="f-name" value="' + esc(d.name) + '" placeholder="เช่น คุกกี้เนยสด" autocomplete="off"></label>' +
+      '<div class="field"><span>สูตร 1 เซตทำได้ (ไม่บังคับ ใช้คำนวณจำนวนชิ้น)</span><div class="pair"><input class="in num" id="f-yn" inputmode="decimal" value="' + esc(d.yn) + '" placeholder="12" autocomplete="off"><input class="in" id="f-yu" list="units" value="' + esc(d.yunit) + '" aria-label="หน่วย" autocomplete="off"></div></div>' +
+      '<div class="field"><span>รูปขนม (ไม่บังคับ)</span><div class="photo-edit" id="photo-box"></div></div>' +
+      '<div class="field"><span>วัตถุดิบต่อ 1 เซต</span><div id="ings" style="display:flex;flex-direction:column;gap:10px"></div></div>' +
+      '<div><button class="btn soft" id="addrow">' + I.plus + 'เพิ่มวัตถุดิบ</button></div>' +
+      '<label class="field"><span>โน้ต เช่น อุณหภูมิและเวลาอบ (ไม่บังคับ)</span><textarea class="in" id="f-note">' + esc(d.note) + '</textarea></label>' +
+      '<div class="footbar"><div>' + (d.id ? '<button class="btn" id="dup">' + I.copy + 'ทำสำเนา</button> ' : '') + '</div>' +
+      (d.id ? '<button class="btn danger" id="del">' + I.trash + (S.confirmDel ? 'แตะอีกครั้งเพื่อลบสูตรนี้' : 'ลบสูตร') + '</button>' : '') + '</div>' +
+      '</div></div>';
+    $('#cancel').onclick = () => { if (d.id) { S.view = 'recipe'; renderRecipe(); takeWake(); } else { S.view = 'home'; renderHome(); } };
+    $('#f-name').oninput = e => { d.name = e.target.value; e.target.classList.remove('bad'); };
+    $('#f-yn').oninput = e => { d.yn = e.target.value; };
+    $('#f-yu').oninput = e => { d.yunit = e.target.value; };
+    $('#f-note').oninput = e => { d.note = e.target.value; };
+    $('#addrow').onclick = () => { d.ing.push(newIng()); renderIngs(); const n = document.querySelectorAll('#ings [data-f="name"]'); n[n.length - 1].focus(); };
+    $('#save').onclick = doSave;
+    const dup = $('#dup'); if (dup) dup.onclick = async () => {
+      const c = JSON.parse(JSON.stringify(cur() || S.recipes.find(x => x.id === d.id)));
+      c.id = uid(); c.ts = Date.now(); c.name += ' (สำเนา)';
+      await saveRecipe(c); toast('ทำสำเนาแล้ว'); openRecipe(c.id);
+    };
+    const del = $('#del'); if (del) del.onclick = async () => {
+      if (!S.confirmDel) { S.confirmDel = true; del.lastChild.textContent = 'แตะอีกครั้งเพื่อลบสูตรนี้'; return; }
+      await removeRecipe(d.id); toast('ลบสูตรแล้ว'); S.view = 'home'; renderHome();
+    };
+    renderIngs(); renderPhoto();
+  }
+  function renderPhoto() {
+    const d = S.draft, box = $('#photo-box'); if (!box) return;
+    box.innerHTML = (d.photo ? '<img alt="รูปขนม" src="' + esc(d.photo) + '">' : '') +
+      '<div class="btns"><label class="btn soft" for="f-photo">' + I.plus + (d.photo ? 'เปลี่ยนรูป' : 'เพิ่มรูป') + '</label>' +
+      (d.photo ? '<button class="btn danger" id="photo-rm">' + I.trash + 'ลบรูป</button>' : '') +
+      '<input id="f-photo" type="file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0"></div>';
+    $('#f-photo').onchange = async e => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      try { d.photo = await resizePhoto(f); renderPhoto(); } catch (err) { toast('ใช้รูปนี้ไม่ได้ ลองเลือกรูปอื่น'); }
+    };
+    const rm = $('#photo-rm'); if (rm) rm.onclick = () => { d.photo = ''; renderPhoto(); };
+  }
+  function renderIngs() {
+    const d = S.draft, box = $('#ings');
+    const gl = [...new Set(d.ing.map(g => g.group.trim()).filter(Boolean))];
+    $('#groups').innerHTML = gl.map(g => '<option value="' + esc(g) + '">').join('');
+    box.innerHTML = '<div class="ing ing-head"><span>ชื่อ</span><span>ปริมาณ</span><span>หน่วย</span><span>กลุ่ม (ไม่บังคับ)</span><span></span></div>' +
+      d.ing.map((g, i) =>
+        '<div class="ing" data-i="' + i + '"><input class="in" data-f="name" value="' + esc(g.name) + '" placeholder="เช่น แป้งสาลี" aria-label="ชื่อวัตถุดิบ" autocomplete="off">' +
+        '<input class="in num" data-f="amt" inputmode="decimal" value="' + esc(g.amt) + '" placeholder="0" aria-label="ปริมาณ" autocomplete="off">' +
+        '<input class="in" data-f="unit" list="units" value="' + esc(g.unit) + '" aria-label="หน่วย" autocomplete="off">' +
+        '<input class="in grp" data-f="group" list="groups" value="' + esc(g.group) + '" placeholder="เช่น ส่วนผสมแห้ง" aria-label="กลุ่ม" autocomplete="off">' +
+        '<div class="mv"><button class="btn icon" data-a="up" aria-label="เลื่อนขึ้น"' + (i === 0 ? ' disabled style="opacity:.4"' : '') + '>' + I.up + '</button>' +
+        '<button class="btn icon" data-a="down" aria-label="เลื่อนลง"' + (i === d.ing.length - 1 ? ' disabled style="opacity:.4"' : '') + '>' + I.down + '</button>' +
+        '<button class="btn icon danger" data-a="rm" aria-label="ลบแถวนี้">' + I.trash + '</button></div></div>').join('');
+    box.oninput = e => {
+      const t = e.target, row = t.closest('.ing'); if (!row || !t.dataset.f) return;
+      d.ing[+row.dataset.i][t.dataset.f] = t.value; t.classList.remove('bad');
+    };
+    box.onclick = e => {
+      const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
+      const i = +b.closest('.ing').dataset.i, a = b.dataset.a;
+      if (a === 'rm') { d.ing.splice(i, 1); if (!d.ing.length) d.ing.push(newIng()); }
+      if (a === 'up' && i > 0) [d.ing[i - 1], d.ing[i]] = [d.ing[i], d.ing[i - 1]];
+      if (a === 'down' && i < d.ing.length - 1) [d.ing[i + 1], d.ing[i]] = [d.ing[i], d.ing[i + 1]];
+      renderIngs();
+    };
+  }
+  async function doSave() {
+    const d = S.draft; let bad = false;
+    const name = d.name.trim();
+    if (!name) { $('#f-name').classList.add('bad'); toast('ใส่ชื่อสูตรก่อน'); return; }
+    const ing = [];
+    document.querySelectorAll('#ings .ing[data-i]').forEach(row => {
+      const g = d.ing[+row.dataset.i];
+      if (!g.name.trim() && !String(g.amt).trim()) return;
+      const amt = parseNum(g.amt);
+      if (!g.name.trim()) { row.querySelector('[data-f="name"]').classList.add('bad'); bad = true; }
+      if (!(amt >= 0)) { row.querySelector('[data-f="amt"]').classList.add('bad'); bad = true; }
+      ing.push({ id: g.id, name: g.name.trim(), amt, unit: g.unit.trim() || 'กรัม', group: g.group.trim() });
+    });
+    if (bad) { toast('ตรวจชื่อและปริมาณวัตถุดิบที่ขีดแดง'); return; }
+    if (!ing.length) { toast('เพิ่มวัตถุดิบอย่างน้อย 1 รายการ'); return; }
+    const yn = parseNum(d.yn);
+    const r = { id: d.id || uid(), ts: d.ts || Date.now(), photo: d.photo || '', name, yn: yn > 0 ? yn : 0, yunit: d.yunit.trim() || 'ชิ้น', note: d.note, ing };
+    $('#save').disabled = true;
+    await saveRecipe(r);
+    toast('บันทึกแล้ว');
+    openRecipe(r.id);
+  }
+
+
+  /* ---------- offline store: IndexedDB with the same small interface the app used online ---------- */
+  const SEED = [
+    { id: 'rbanana', ts: 1790900000001, name: 'ขนมกล้วย', yn: 30, yunit: 'ชิ้น', note: '', photo: '', ing: [
+      ['กล้วย', 550, 'กรัม'], ['แป้งมัน', 150, 'กรัม'], ['แป้งข้าวเจ้า', 40, 'กรัม'], ['แป้งท้าวยายม่อม', 60, 'กรัม'],
+      ['น้ำตาลมะพร้าว', 120, 'กรัม'], ['เกลือ', 0.5, 'ช้อนชา'], ['หัวกะทิ', 170, 'กรัม'], ['เนื้อมะพร้าวอ่อน', 150, 'กรัม'] ] },
+    { id: 'rpumpkin', ts: 1790900000002, name: 'ขนมฟักทอง', yn: 20, yunit: 'ชิ้น', note: '', photo: '', ing: [
+      ['ฟักทองนึ่ง', 350, 'กรัม'], ['แป้งข้าวเจ้า', 50, 'กรัม'], ['แป้งมัน', 50, 'กรัม'], ['แป้งท้าวยายม่อม', 25, 'กรัม'],
+      ['น้ำตาลมะพร้าว', 140, 'กรัม'], ['หัวกะทิ', 110, 'กรัม'], ['เกลือ', 0.25, 'ช้อนชา'], ['เนื้อมะพร้าวอ่อน', 100, 'กรัม'] ] },
+    { id: 'rpurple', ts: 1790900000003, name: 'ขนมมันม่วง', yn: 20, yunit: 'ชิ้น', note: '', photo: '', ing: [
+      ['มันม่วงนึ่ง', 350, 'กรัม'], ['แป้งข้าวเจ้า', 50, 'กรัม'], ['แป้งมัน', 50, 'กรัม'], ['แป้งท้าวยายม่อม', 25, 'กรัม'],
+      ['น้ำตาลมะพร้าว', 140, 'กรัม'], ['หัวกะทิ', 160, 'กรัม'], ['เกลือ', 0.25, 'ช้อนชา'], ['เนื้อมะพร้าวอ่อน', 100, 'กรัม'] ] }
+  ].map(r => Object.assign(r, { ing: r.ing.map((g, i) => ({ id: r.id + i, name: g[0], amt: g[1], unit: g[2], group: '' })) }));
+
+  function openIDB() {
+    return new Promise((res, rej) => {
+      const q = indexedDB.open('recipe-book', 1);
+      q.onupgradeneeded = () => { const d = q.result; d.createObjectStore('recipes', { keyPath: 'id' }); d.createObjectStore('batches', { keyPath: 'id' }); d.createObjectStore('meta', { keyPath: 'id' }); };
+      q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+    });
+  }
+  async function makeStore() {
+    const idb = await openIDB();
+    const run = (store, mode, fn) => new Promise((res, rej) => { const t = idb.transaction(store, mode); const out = fn(t.objectStore(store)); t.oncomplete = () => res(out && out.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); });
+    const all = name => run(name, 'readonly', st => st.getAll());
+    const listeners = { recipes: [], batches: [] };
+    const snapOf = rows => ({ docs: rows.map(r => ({ id: r.id, data: () => r })) });
+    async function notify(name) { const rows = await all(name); listeners[name].forEach(fn => fn(snapOf(rows))); }
+    const meta = await run('meta', 'readonly', st => st.get('seeded'));
+    if (!meta) { await run('recipes', 'readwrite', st => { SEED.forEach(r => st.put(r)); }); await run('meta', 'readwrite', st => { st.put({ id: 'seeded' }); }); }
+    return {
+      collection(name) { return { onSnapshot(next) { listeners[name].push(next); notify(name); return () => {}; } }; },
+      doc(path) {
+        const [name, id] = path.split('/');
+        return {
+          async set(data) { await run(name, 'readwrite', st => { st.put(Object.assign({}, data, { id })); }); await notify(name); },
+          async delete() { await run(name, 'readwrite', st => { st.delete(id); }); await notify(name); }
+        };
+      },
+      async dump() { return { app: 'recipe-book', version: 1, recipes: await all('recipes'), batches: await all('batches') }; },
+      async load(obj) {
+        await run('recipes', 'readwrite', st => { (obj.recipes || []).forEach(r => r && r.id && st.put(r)); });
+        await run('batches', 'readwrite', st => { (obj.batches || []).forEach(b => b && b.id && st.put(b)); });
+        await notify('recipes'); await notify('batches');
+      }
+    };
+  }
+
+  /* ---------- sync ---------- */
+  function onRecipesChanged() {
+    if (S.view === 'home') renderGrid();
+    else if (S.view === 'recipe') {
+      if (!cur()) { S.view = 'home'; renderHome(); return; }
+      const h = $('.bar h1'); if (h) h.textContent = cur().name;
+      refreshCalc(); renderList();
+    } else if (S.view === 'history') renderHistory();
+  }
+  renderHome();
+  if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {})); }
+  (async function () {
+    let db = null;
+    try { db = await makeStore(); S.store = db; try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {} } catch (e) { db = null; }
+    S.db = db;
+    if (!db) { S.loading = false; onRecipesChanged(); return; }
+    try {
+      db.collection('recipes').onSnapshot(snap => {
+        S.recipes = snap.docs.map(x => Object.assign({}, x.data(), { id: x.id })).filter(r => r.name && Array.isArray(r.ing));
+        sortRecipes(); cache(); S.loading = false; onRecipesChanged();
+      }, () => { S.db = null; S.loading = false; onRecipesChanged(); });
+    } catch (e) { S.db = null; S.loading = false; onRecipesChanged(); }
+    try {
+      db.collection('batches').onSnapshot(snap => {
+        S.batches = snap.docs.map(x => Object.assign({}, x.data(), { id: x.id })).filter(b => b.ts && b.rid);
+        cacheB(); if (S.view === 'history') renderHistory();
+      }, () => {});
+    } catch (e) {}
+  })();
+})();
+</script>
+</body>
+</html>
