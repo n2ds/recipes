@@ -315,18 +315,57 @@ textarea.in { padding: 12px 14px; min-height: 96px; line-height: 1.5; resize: ve
     } catch (e) { toast('ไฟล์นี้ใช้นำเข้าไม่ได้'); }
   }
 
+  async function backupText() { return JSON.stringify(await S.store.dump()); }
+  function backupName() { return 'สมุดสูตรขนม-' + new Date().toISOString().slice(0, 10) + '.json'; }
+  async function downloadData() {
+    if (!S.store) { toast('เครื่องนี้ไม่รองรับการสำรองข้อมูล'); return; }
+    const file = new File([await backupText()], backupName(), { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 8000); toast('ดาวน์โหลดแล้ว ดูในโฟลเดอร์ Downloads');
+  }
+  async function copyData() {
+    if (!S.store) { toast('เครื่องนี้ไม่รองรับการสำรองข้อมูล'); return; }
+    const t = await backupText(), box = $('#copybox');
+    box.value = t; box.hidden = false;
+    try { await navigator.clipboard.writeText(t); toast('คัดลอกแล้ว นำไปวางในแอปโน้ตได้เลย'); }
+    catch (e) { box.focus(); box.select(); toast('แตะค้างที่ช่องข้อความ เลือกทั้งหมด แล้วกดคัดลอก'); }
+  }
+  function renderBackup() {
+    releaseWake();
+    app.innerHTML =
+      '<header class="bar"><button class="btn icon" id="back" aria-label="กลับ">' + I.back + '</button><h1>สำรอง / นำเข้าข้อมูล</h1></header>' +
+      '<div class="page"><div class="form">' +
+      '<p>ข้อมูลทั้งหมดเก็บอยู่ในเครื่องนี้ เลือกวิธีสำรองที่สะดวก แล้วเก็บไว้ที่อื่น เช่น แอปโน้ต หรืออีเมลหาตัวเอง</p>' +
+      '<div class="label" style="color:var(--matcha-deep)">สำรอง</div>' +
+      '<div class="footbar" style="justify-content:flex-start"><button class="btn primary" id="b-dl">ดาวน์โหลดไฟล์สำรอง</button><button class="btn" id="b-share">แชร์ / บันทึกลงไฟล์</button><button class="btn lav" id="b-copy">คัดลอกข้อมูลไปวางในโน้ต</button></div>' +
+      '<textarea class="in" id="copybox" hidden readonly aria-label="ข้อมูลสำรอง" style="min-height:120px;font-size:.8rem"></textarea>' +
+      '<div class="label" style="margin-top:12px">นำเข้า</div>' +
+      '<div class="footbar" style="justify-content:flex-start"><label class="btn" for="b-file">เลือกไฟล์สำรอง</label><input id="b-file" type="file" accept="application/json,.json" style="position:absolute;width:1px;height:1px;opacity:0"></div>' +
+      '<label class="field"><span>หรือวางข้อมูลที่คัดลอกไว้ตรงนี้</span><textarea class="in" id="b-paste" placeholder="วางข้อมูลสำรอง" style="min-height:120px;font-size:.8rem"></textarea></label>' +
+      '<div><button class="btn soft" id="b-import">นำเข้าข้อมูลที่วาง</button></div>' +
+      '</div></div>';
+    $('#back').onclick = () => { S.view = 'home'; renderHome(); };
+    $('#b-dl').onclick = downloadData;
+    $('#b-share').onclick = exportData;
+    $('#b-copy').onclick = copyData;
+    $('#b-file').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) importData(f); e.target.value = ''; };
+    $('#b-import').onclick = async () => {
+      const t = $('#b-paste').value.trim(); if (!t) { toast('ยังไม่ได้วางข้อมูล'); return; }
+      await importData(new File([t], 'paste.json'));
+    };
+  }
+
   /* ---------- home ---------- */
   function renderHome() {
     releaseWake();
     app.innerHTML =
       '<header class="bar"><h1>สมุดสูตรขนม</h1><div class="actions"><button class="btn" id="hist">' + I.clock + 'ประวัติ</button><button class="btn primary" id="add">' + I.plus + 'เพิ่มสูตร</button></div></header>' +
       '<div class="page"><div class="wrap"><input id="q" class="search" type="search" placeholder="ค้นหาสูตร" value="' + esc(S.q) + '" aria-label="ค้นหาสูตร"><div id="grid"></div>' +
-      '<div class="footbar" style="margin-top:12px"><button class="btn" id="export">สำรองข้อมูล</button><label class="btn" for="import">นำเข้าข้อมูลสำรอง</label><input id="import" type="file" accept="application/json,.json" style="position:absolute;width:1px;height:1px;opacity:0"></div>' +
-      '<p style="color:var(--ink-soft);font-size:.9rem">สูตร รูป และประวัติเก็บอยู่ในเครื่องนี้ ควรกดสำรองข้อมูลเก็บไว้เป็นครั้งคราว</p></div></div>';
+      '<div class="footbar" style="margin-top:12px"><button class="btn" id="backup">สำรอง / นำเข้าข้อมูล</button></div>' +
+      '<p style="color:var(--ink-soft);font-size:.9rem">สูตร รูป และประวัติเก็บอยู่ในเครื่องนี้ ควรสำรองข้อมูลเก็บไว้เป็นครั้งคราว</p></div></div>';
     $('#add').onclick = () => openEdit(null);
     $('#hist').onclick = () => openHistory(null, 'home');
-    $('#export').onclick = exportData;
-    $('#import').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) importData(f); e.target.value = ''; };
+    $('#backup').onclick = () => { S.view = 'backup'; renderBackup(); };
     $('#q').oninput = e => { S.q = e.target.value; renderGrid(); };
     renderGrid();
   }
